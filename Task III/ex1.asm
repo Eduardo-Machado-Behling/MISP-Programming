@@ -19,7 +19,7 @@
 .macro read_float(%reg)
 	li $v0, 6
 	syscall
-	move %reg, $f0
+	mov.s %reg, $f0
 .end_macro
 
 .macro print_stra(%addr)
@@ -29,8 +29,14 @@
 .end_macro
 
 .macro print_intr(%reg)
-	la $a0, %reg
+	move $a0, %reg
 	li $v0, 1
+	syscall
+.end_macro
+
+.macro print_floatr(%reg)
+	li $v0, 2
+	mov.s $f12, %reg
 	syscall
 .end_macro
 
@@ -42,13 +48,14 @@
 .data
 continue_msg: .asciiz "Entre 1 para sair:\n"
 nota_msg_start: .asciiz "Entre a nota #"
-nota_msg_end: .asciiz " :\n"
+nota_msg_end: .asciiz ":\n"
 media_msg: .asciiz "Sua média é "
 situation_msg: .asciiz ", Portanto você esta "
 aprovado_msg: .asciiz "aprovado\n"
 reprovado_msg: .asciiz "reprobado\n"
 exame_msg: .asciiz "exame\n"
 input_prompt: .asciiz ">>> "
+zero: .float 0.0
 
 fail: .float 3.0
 exame: .float 7.0
@@ -65,8 +72,7 @@ promptEnd:
 	beq $s0, 1, whileEnd
 	
 	li $t0, 0
-	li $f4, 0
-	cvt.s.w $f4, $f4
+	l.s $f4, zero
 for:
 	beq $t0, 3, forEnd
 	print_stra(nota_msg_start)
@@ -84,22 +90,24 @@ forEnd:
 	cvt.s.w $f1, $f1
 	div.s $f4, $f4, $f1
 	print_stra(media_msg)
-	print_float($f4)
+	print_floatr($f4)
 	print_stra(situation_msg)
 	
 	l.s $f0, fail
-	c.le.s $f4, $f0
+	c.lt.s $f4, $f0
 	bc1t switchPass
 	l.s $f0, exame
-	c.le.s $f4, $f0
-	bc1t switchExame
+	c.lt.s $f4, $f0
+	bc1t switchTest
     j switchPass
 switchFail:
-	print_stra(aprovado_msg)
-switchTest:
 	print_stra(reprovado_msg)
-switchPass:
+	j while
+switchTest:
 	print_stra(exame_msg)
+	j while
+switchPass:
+	print_stra(aprovado_msg)
 	j while
 whileEnd:
 	exit()
